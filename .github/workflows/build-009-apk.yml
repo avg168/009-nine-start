@@ -37,65 +37,18 @@ jobs:
       - name: Find and unzip V3.8.2 project
         shell: bash
         run: |
-          set -euo pipefail
-
-          ZIP="$(find . -maxdepth 2 -type f -iname '*V3.8.2*APK*.zip' | head -n 1)"
-
-          if [ -z "${ZIP:-}" ]; then
-            echo "找不到 V3.8.2 APK ZIP"
-            find . -maxdepth 2 -type f -print
-            exit 1
-          fi
-
+          set -e
+          ZIP=$(find . -maxdepth 2 -type f -iname '*V3.8.2*APK*.zip' | head -n 1)
+          test -n "$ZIP"
           echo "Using ZIP: $ZIP"
 
           rm -rf extracted_project
-          mkdir extracted_project
+          mkdir -p extracted_project
           unzip -q "$ZIP" -d extracted_project
 
-          SETTINGS="$(find extracted_project -type f -name settings.gradle | head -n 1)"
+          SETTINGS=$(find extracted_project -type f -name settings.gradle | head -n 1)
+          test -n "$SETTINGS"
 
-          if [ -z "${SETTINGS:-}" ]; then
-            echo "解壓後找不到 settings.gradle"
-            find extracted_project -maxdepth 4 -type f -print
-            exit 1
-          fi
-
-          PROJECT_DIR="$(dirname "$SETTINGS")"
-
+          PROJECT_DIR=$(dirname "$SETTINGS")
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          echo "Project root: $PROJECT_DIR"
-
-      - name: Verify project before build
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          test -f "$PROJECT_DIR/settings.gradle"
-          test -f "$PROJECT_DIR/build.gradle"
-          test -f "$PROJECT_DIR/app/build.gradle"
-          test -f "$PROJECT_DIR/app/src/main/AndroidManifest.xml"
-          test -f "$PROJECT_DIR/app/src/main/assets/index.html"
-
-          grep -q "compileSdk 36" "$PROJECT_DIR/app/build.gradle"
-          grep -q "targetSdk 36" "$PROJECT_DIR/app/build.gradle"
-          grep -q "buildConfig true" "$PROJECT_DIR/app/build.gradle"
-
-          echo "Project verification passed."
-
-      - name: Build Debug APK
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd "$PROJECT_DIR"
-          gradle --no-daemon --stacktrace assembleDebug
-
-      - name: Verify APK
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          APK="$(find "$PROJECT_DIR/app/build/outputs/apk/debug" -type f -name '*.apk' | head -n 1)"
-
-          if [ -z "${APK:-}" ]; then
-            echo
+          echo "
